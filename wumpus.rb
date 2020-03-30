@@ -5,6 +5,12 @@ class Cave
   def initialize
     @rooms = {}
     (1..20).each { |num| self.rooms[num] = Room.new(num, [], :empty) }
+    self.rooms.each do |room|
+      until room[1].connections.length == 3
+        new_connection = rand(20)
+        room[1].connections << new_connection unless room[1].connections.include?(new_connection)
+      end
+    end
     @entrance = rand(@rooms.length)
   end
 end
@@ -20,7 +26,8 @@ class Room
   end
 
   def contains?(hazard)
-    contents.has_key?(hazard) end
+    contents.has_key?(hazard) 
+  end
 end
 
 class Player
