@@ -11,7 +11,9 @@ class Cave
         room[1].connections << new_connection unless room[1].connections.include?(new_connection)
       end
     end
+    
     @entrance = rand(@rooms.length)
+    @player = Player.new(entrance)
   end
 end
 
@@ -46,7 +48,6 @@ p cave
 
 
 # next steps:
-#   connect the rooms
 #   add wumpus
 #   add hazards
-
+#   add player location method (=> you are in room x)
