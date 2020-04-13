@@ -119,7 +119,7 @@ def new_game
   puts "                            HUNT THE WUMPUS                                  " 
   puts
   puts "   -----------------------------------------------------------------------   "
-  sleep(2.0)
+  sleep(1.0)
   cave = Cave.new
   puts "The wumpus is in room #{cave.wumpus}."
   player = Player.new(cave.entrance, 100)
@@ -127,7 +127,24 @@ def new_game
   while player.health > 0
     cave.show_contents
     player.status
-    puts "From here you can get to the following rooms: " + cave.possible_paths_from_here.to_s
+    
+    adjoining_rooms = cave.possible_paths_from_here
+    alerts = []
+    adjoining_rooms.each do |room|
+      case
+      when cave.rooms[room-1].contents[:giant_bats] == :yes
+        alerts << "You hear a rustling noise."
+      when cave.rooms[room-1].contents[:bottemless_pit] == :yes
+        alerts << "You feel a breeze."
+      when cave.rooms[room-1].contents[:wumpus] == :yes
+        alerts << "There's a terrible smell in the air."
+      end
+    end 
+    
+    alerts.uniq
+    alerts.each { |alert| puts alert }
+    
+    puts "From here you can get to the following rooms: " + adjoining_rooms.to_s
     print "Where to? "
     choice = gets.chomp.to_i
     if cave.move_to(choice) 
@@ -140,9 +157,7 @@ def new_game
         sleep(2.0)
       end
     end
-    puts "   -----------------------------------------------------------------------   "
   end
-  puts player.status
 end
 
 new_game 
