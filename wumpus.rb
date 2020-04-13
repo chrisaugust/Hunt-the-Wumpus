@@ -1,6 +1,6 @@
 class Cave
   attr_reader :rooms, :entrance
-  attr_accessor :player, :location, :wumpus, :bats, :pit
+  attr_accessor :player, :location, :wumpus, :giant_bats, :bottomless_pit
 
   def initialize
     connections = [[2, 5, 8],
@@ -25,12 +25,29 @@ class Cave
                    [11, 17, 19]]
     @rooms = []
     connections.each_with_index do |arr, idx|
-      self.rooms << Room.new(idx + 1, arr, :empty)
+      self.rooms << Room.new(idx + 1, arr)
     end 
     @entrance = rand(@rooms.length)
     @location = []
     @location << @entrance  
-    @wumpus = rand(@rooms.length)
+    self.rooms[@entrance - 1].contents[:player] = :yes
+    
+    wumpus_starts_here = rand(@rooms.length)
+    @wumpus = wumpus_starts_here
+    self.rooms[wumpus_starts_here - 1].contents[:wumpus] = :yes
+
+    3.times do
+      giant_bats_be_here = rand(@rooms.length)
+      @giant_bats = giant_bats_be_here
+      self.rooms[giant_bats_be_here - 1].contents[:giant_bats] = :yes
+    end
+    
+    2.times do
+      bottomless_pit_is_here = rand(@rooms.length)
+      @bottomless_pit = bottomless_pit_is_here
+      self.rooms[bottomless_pit_is_here - 1].contents[:bottomless_pit] = :yes
+    end
+
   end
  
   def possible_paths_from_here
@@ -39,18 +56,28 @@ class Cave
   
   def move_to(room_number)
     if possible_paths_from_here.include?(room_number)
+      self.rooms[@location[-1] - 1].contents[:player] = :no
       @location << room_number
+      self.rooms[room_number - 1].contents[:player] = :yes
     else
       puts "There's no passageway to that room from here."
     end
   end  
-end
- 
+  
+  def show_contents
+   self.rooms.each { |room| puts "#{room.number}: #{room.contents}" }
+  end
+
+end 
+
 class Room
   attr_reader :number, :connections
   attr_accessor :contents
 
-  def initialize(number, connections, contents)
+  def initialize(number, connections, contents={:player => :no,
+                                                :wumpus => :no, 
+                                                :giant_bats => :no, 
+                                                :bottomless_pit => :no})
     @number = number
     @connections = connections
     @contents = contents
@@ -88,11 +115,17 @@ class Player
 end
  
 def new_game
+  system("clear")
+  puts "                            HUNT THE WUMPUS                                  " 
+  puts
+  puts "   -----------------------------------------------------------------------   "
+  sleep(2.0)
   cave = Cave.new
   puts "The wumpus is in room #{cave.wumpus}."
   player = Player.new(cave.entrance, 100)
 
   while player.health > 0
+    cave.show_contents
     player.status
     puts "From here you can get to the following rooms: " + cave.possible_paths_from_here.to_s
     print "Where to? "
@@ -100,11 +133,14 @@ def new_game
     if cave.move_to(choice) 
       player.location = choice
       if player.location == cave.wumpus
+        system("clear")
+        sleep(0.5)
         player.take_some_damage(rand(100))
         puts "Whoa that's a terrible smell. You just ran into the wumpus and have taken damage. It seems like you'll make it, but it's pitch black in here so you can't see how badly you're hurt."
+        sleep(2.0)
       end
     end
-    puts "------------------------"
+    puts "   -----------------------------------------------------------------------   "
   end
   puts player.status
 end
@@ -112,10 +148,7 @@ end
 new_game 
 
 # 
-# # next steps:
-# #   FIX logic for connecting room:
-# #     make 2-way
-# #     ensure all rooms are connected
-# #   add a message if you die
-# #   randomize wumpus location
-# #   add hazards
+# next steps:
+#   add actions corresponding to hazards
+#   add warning messages in rooms adjoining to hazards
+#   add shooting method
