@@ -27,7 +27,7 @@ class Cave
     connections.each_with_index do |arr, idx|
       self.rooms << Room.new(idx + 1, arr)
     end 
-    @entrance = rand(@rooms.length)
+    @entrance = rand(1..@rooms.length)
     @location = []
     @location << @entrance  
     self.rooms[@entrance - 1].contents[:player] = :yes
@@ -36,15 +36,17 @@ class Cave
     @wumpus = wumpus_starts_here
     self.rooms[wumpus_starts_here - 1].contents[:wumpus] = :yes
 
+    @giant_bats = []
     3.times do
       giant_bats_be_here = rand(@rooms.length)
-      @giant_bats = giant_bats_be_here
+      @giant_bats << giant_bats_be_here
       self.rooms[giant_bats_be_here - 1].contents[:giant_bats] = :yes
     end
     
+    @bottomless_pit = []
     2.times do
       bottomless_pit_is_here = rand(@rooms.length)
-      @bottomless_pit = bottomless_pit_is_here
+      @bottomless_pit << bottomless_pit_is_here
       self.rooms[bottomless_pit_is_here - 1].contents[:bottomless_pit] = :yes
     end
 
@@ -63,6 +65,13 @@ class Cave
       puts "There's no passageway to that room from here."
     end
   end  
+  
+  def player_taken_by_bats
+      random_room = rand(20)
+      self.rooms[@location[-1] - 1].contents[:player] = :no
+      @location << random_room
+      self.rooms[random_room - 1].contents[:player] = :yes
+  end
   
   def show_contents
    self.rooms.each { |room| puts "#{room.number}: #{room.contents}" }
@@ -109,8 +118,12 @@ class Player
       puts "You're in room #{self.location}"
       puts "Health is at #{self.health}/100."
     else
-      puts "You're dead. Enjoy hanging out with the wumpus as a ghost."
+      player.dead
     end
+  end
+  
+  def dead
+    puts "Oh my, you just died. Guess your ghost will be hanging out with the Wumpus eternally. Good thing ghosts don't have a sense of smell... or do they?" 
   end
 end
  
@@ -121,49 +134,78 @@ def new_game
   puts "   -----------------------------------------------------------------------   "
   sleep(1.0)
   cave = Cave.new
-  puts "The wumpus is in room #{cave.wumpus}."
+  puts "You've come to the lair of the Wumpus to prove your bravery and hunting prowess. Many have come here before you, but none have returned."
   player = Player.new(cave.entrance, 100)
 
   while player.health > 0
-    cave.show_contents
+    puts
+    # cave.show_contents
     player.status
-    
+
+    # detect and provide a warning of nearby hazards to player     
     adjoining_rooms = cave.possible_paths_from_here
     alerts = []
     adjoining_rooms.each do |room|
-      case
-      when cave.rooms[room-1].contents[:giant_bats] == :yes
-        alerts << "You hear a rustling noise."
-      when cave.rooms[room-1].contents[:bottemless_pit] == :yes
-        alerts << "You feel a breeze."
-      when cave.rooms[room-1].contents[:wumpus] == :yes
-        alerts << "There's a terrible smell in the air."
-      end
+      alerts << "You hear a rustling noise." if cave.rooms[room-1].contents[:giant_bats] == :yes
+      alerts << "You feel a breeze." if cave.rooms[room-1].contents[:bottomless_pit] == :yes
+      alerts << "A terrible smell hangs in the air." if cave.rooms[room-1].contents[:wumpus] == :yes
     end 
     
-    alerts.uniq
+    alerts.uniq!
     alerts.each { |alert| puts alert }
     
-    puts "From here you can get to the following rooms: " + adjoining_rooms.to_s
+    
+    print "From here you can get to the following rooms: "
+    adjoining_rooms.each { |room| print room.to_s + " " }
+    puts
     print "Where to? "
-    choice = gets.chomp.to_i
-    if cave.move_to(choice) 
-      player.location = choice
-      if player.location == cave.wumpus
+    choice = gets.chomp
+    
+    # logic for moving rooms and potentially running into hazards
+    if choice == "map"
+      cave.show_contents
+    elsif cave.move_to(choice.to_i) 
+      player.location = choice.to_i
+      case
+      when player.location == cave.wumpus
         system("clear")
         sleep(0.5)
         player.take_some_damage(rand(100))
-        puts "Whoa that's a terrible smell. You just ran into the wumpus and have taken damage. It seems like you'll make it, but it's pitch black in here so you can't see how badly you're hurt."
+        puts "The Wumpus attacks with savage intensity and runs away before you can fight back. You have taken damage. It seems like you'll make it, but it's pitch black in here so you can't see how badly you're hurt."
+
         sleep(2.0)
+      when cave.giant_bats.include?(player.location)
+        system("clear")
+        sleep(0.5)
+        player.take_some_damage(rand(20))
+        puts "Giant bats pick you up and drop you on your head in another room. Ouch!"
+        cave.rooms[player.location - 1].contents[:giant_bats] = :no
+        cave.player_taken_by_bats
+        player.location = cave.location[-1]
+        moved = false
+        until moved
+          random_room = rand(1..20)
+          if cave.rooms[random_room - 1].contents[:giant_bats] = :no
+            cave.rooms[random_room - 1].contents[:giant_bats] = :yes
+            moved = true
+          end
+        end
+      when cave.bottomless_pit.include?(player.location)
+        system("clear")
+        sleep(0.5)
+        puts "You've fallen into a bottomless pit!"
+        20.times { puts "Ahhhhhhh!"; sleep(0.25); }
+        player.dead
+        exit(1)
       end
     end
   end
+  
 end
 
 new_game 
 
-# 
 # next steps:
-#   add actions corresponding to hazards
-#   add warning messages in rooms adjoining to hazards
 #   add shooting method
+#   add wumpus moving around when he is startled
+#   fix bat movement after carrying off player
