@@ -38,9 +38,14 @@ class Cave
 
     @giant_bats = []
     3.times do
-      giant_bats_be_here = rand(@rooms.length)
-      @giant_bats << giant_bats_be_here
-      self.rooms[giant_bats_be_here - 1].contents[:giant_bats] = :yes
+      loop do
+        giant_bats_be_here = rand(@rooms.length)
+        unless self.rooms[giant_bats_be_here - 1].contents[:giant_bats] == :yes
+          @giant_bats << giant_bats_be_here
+          self.rooms[giant_bats_be_here - 1].contents[:giant_bats] = :yes
+          break 
+        end
+      end
     end
     
     @bottomless_pit = []
@@ -67,7 +72,7 @@ class Cave
   end  
   
   def player_taken_by_bats
-      random_room = rand(20)
+      random_room = rand(1..20)
       self.rooms[@location[-1] - 1].contents[:player] = :no
       @location << random_room
       self.rooms[random_room - 1].contents[:player] = :yes
@@ -139,7 +144,6 @@ def new_game
 
   while player.health > 0
     puts
-    # cave.show_contents
     player.status
 
     # detect and provide a warning of nearby hazards to player     
@@ -163,7 +167,7 @@ def new_game
     
     if choice.downcase == "m" or choice.downcase == "move"
       # logic for moving rooms and potentially running into hazards
-      print "Which room?"
+      print "Which room? "
       choice = gets.chomp
       if choice == "map"
         cave.show_contents
@@ -205,13 +209,24 @@ def new_game
     elsif choice.downcase == "s" or choice.downcase == "shoot"
       print "Into which room? "
       choice = gets.chomp.to_i
-      if cave.wumpus == choice && rand(1..10) >= 5
+      if cave.wumpus == choice
+        system("clear")
+        puts "Bang!"
+        sleep(1.0)
+        puts "A blood-curdling howl rends the air..."
+        sleep(1.0)
         puts "You killed the Wumpus! Good job!"
+        sleep(2.0)
         exit(1)
       else
+        system("clear")
+        puts "Bang!"
+        sleep(1.0)
+        puts 
         puts "You missed! What's worse, you've startled the Wumpus! Hopefully he doesn't run in your direction."
         cave.rooms[cave.wumpus - 1].contents[:wumpus] = :no
-        cave.rooms[rand(0..20)].contents[:wumpus] = :yes
+        cave.wumpus = rand(1..20)
+        cave.rooms[cave.wumpus - 1].contents[:wumpus] = :yes
       end
     end
   end
@@ -220,4 +235,4 @@ end
 new_game 
 
 # next steps:
-#   fix bat movement after carrying off player
+#   fix bat movement after carrying off player (adjust cave.giant_bats array)
